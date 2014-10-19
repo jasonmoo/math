@@ -12,6 +12,8 @@ import (
 )
 
 var (
+	all = flag.Bool("all", false, "output all metrics")
+
 	do_sum = flag.Bool("sum", false, "output sum of values")
 	do_avg = flag.Bool("avg", false, "output avg of values")
 	do_max = flag.Bool("max", false, "output max value")
@@ -20,15 +22,16 @@ var (
 	delimiter = flag.String("d", ",", "delimiter")
 	field     = flag.Int("f", 1, "field to parse")
 
-	sum, avg, max, min float64
+	sum, max, min float64
 
-	min_set bool
-	avg_ct  uint64
+	min_set, max_set bool
+
+	count uint64
 )
 
 func init() {
 	flag.Parse()
-	if !*do_sum && !*do_avg && !*do_max && !*do_min {
+	if !*all && !*do_sum && !*do_avg && !*do_max && !*do_min {
 		fmt.Println("Usage:")
 		flag.PrintDefaults()
 		os.Exit(1)
@@ -55,19 +58,19 @@ func main() {
 		process(line[f])
 	}
 
-	if *do_sum {
+	if *all || *do_sum {
 		fmt.Printf("Sum: %g\n", sum)
 	}
 
-	if *do_avg {
-		fmt.Printf("Avg: %g\n", avg/float64(avg_ct))
+	if *all || *do_avg {
+		fmt.Printf("Avg: %g\n", sum/float64(count))
 	}
 
-	if *do_max {
+	if *all || *do_max {
 		fmt.Printf("Max: %g\n", max)
 	}
 
-	if *do_min {
+	if *all || *do_min {
 		fmt.Printf("Min: %g\n", min)
 	}
 
@@ -81,20 +84,16 @@ func process(val string) {
 		return
 	}
 
-	if *do_sum {
-		sum += v
-	}
+	count++
 
-	if *do_avg {
-		avg += v
-		avg_ct++
-	}
+	sum += v
 
-	if *do_max && v > max {
+	if v > max || !max_set {
 		max = v
+		max_set = true
 	}
 
-	if *do_min && (v < min || !min_set) {
+	if v < min || !min_set {
 		min = v
 		min_set = true
 	}
