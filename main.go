@@ -1,11 +1,10 @@
 package main
 
 import (
-	"encoding/csv"
+	"bufio"
 	"flag"
 	"fmt"
-	"io"
-	"log"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -24,9 +23,11 @@ var (
 
 	sum, max, min float64
 
+	m, s float64 // stddev
+
 	min_set, max_set bool
 
-	count uint64
+	count float64
 )
 
 func init() {
@@ -40,18 +41,14 @@ func init() {
 
 func main() {
 
-	cr := csv.NewReader(os.Stdin)
-	cr.Comma = rune((*delimiter)[0])
+	scanner := bufio.NewScanner(os.Stdin)
+
+	d := rune((*delimiter)[0])
+	dfunc := func(c rune) bool { return c == d }
 	f := *field - 1
 
-	for {
-		line, err := cr.Read()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			log.Fatal(err)
-		}
+	for scanner.Scan() {
+		line := strings.FieldsFunc(scanner.Text(), dfunc)
 		if len(line) < *field {
 			continue
 		}
@@ -59,19 +56,20 @@ func main() {
 	}
 
 	if *all || *do_sum {
-		fmt.Printf("Sum: %g\n", sum)
+		fmt.Println("Sum:", strconv.FormatFloat(sum, 'f', -1, 64))
 	}
 
 	if *all || *do_avg {
-		fmt.Printf("Avg: %g\n", sum/float64(count))
+		fmt.Println("Avg:", strconv.FormatFloat(sum/float64(count), 'f', -1, 64))
+		fmt.Println("Stddev:", strconv.FormatFloat(math.Sqrt(s/count-1), 'f', -1, 64))
 	}
 
 	if *all || *do_max {
-		fmt.Printf("Max: %g\n", max)
+		fmt.Println("Max:", strconv.FormatFloat(max, 'f', -1, 64))
 	}
 
 	if *all || *do_min {
-		fmt.Printf("Min: %g\n", min)
+		fmt.Println("Min:", strconv.FormatFloat(min, 'f', -1, 64))
 	}
 
 }
@@ -85,6 +83,10 @@ func process(val string) {
 	}
 
 	count++
+
+	tm := m
+	m = (v - tm) / count
+	s = (v - tm) * (v - m)
 
 	sum += v
 
